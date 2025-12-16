@@ -10,18 +10,36 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const storagePath = process.env.STORAGE_PATH || './storage';
-    let folder;
+    try {
+      const storagePath = process.env.STORAGE_PATH || './storage';
 
-    if (file.fieldname === 'html') {
-      folder = path.join(storagePath, 'html');
-    } else if (file.fieldname === 'pdf') {
-      folder = path.join(storagePath, 'pdfs');
-    } else if (file.fieldname === 'images') {
-      folder = path.join(storagePath, 'images');
+      // Get reins_id from request body to organize files by property
+      const propertyData = JSON.parse(req.body.propertyData);
+      const reinsId = propertyData.reins_id || 'unknown';
+
+      // Create property-specific folder
+      const propertyFolder = path.join(storagePath, reinsId);
+
+      // Create subdirectory based on file type
+      let folder;
+      if (file.fieldname === 'html') {
+        folder = path.join(propertyFolder, 'html');
+      } else if (file.fieldname === 'pdf') {
+        folder = path.join(propertyFolder, 'pdfs');
+      } else if (file.fieldname === 'images') {
+        folder = path.join(propertyFolder, 'images');
+      }
+
+      // Create directories if they don't exist
+      if (!fs.existsSync(folder)) {
+        fs.mkdirSync(folder, { recursive: true });
+      }
+
+      cb(null, folder);
+    } catch (error) {
+      console.error('Storage destination error:', error);
+      cb(error);
     }
-
-    cb(null, folder);
   },
   filename: (req, file, cb) => {
     // Create unique filename with timestamp
