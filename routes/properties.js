@@ -13,12 +13,20 @@ const storage = multer.diskStorage({
     try {
       const storagePath = process.env.STORAGE_PATH || './storage';
 
-      // Get reins_id from request body to organize files by property
+      // Get property data from request body
       const propertyData = JSON.parse(req.body.propertyData);
       const reinsId = propertyData.reins_id || 'unknown';
+      const buildingName = propertyData.buildingName || propertyData.reins_id || 'unknown';
 
-      // Create property-specific folder
-      const propertyFolder = path.join(storagePath, reinsId);
+      // Sanitize building name for folder (remove invalid characters)
+      const sanitizedName = buildingName
+        .replace(/[<>:"/\\|?*]/g, '_')  // Replace invalid Windows/Linux chars
+        .replace(/\s+/g, '_')            // Replace spaces with underscore
+        .substring(0, 100);              // Limit length
+
+      // Create property-specific folder with name (add reins_id for uniqueness)
+      const folderName = `${sanitizedName}_${reinsId}`;
+      const propertyFolder = path.join(storagePath, folderName);
 
       // Create subdirectory based on file type
       let folder;
