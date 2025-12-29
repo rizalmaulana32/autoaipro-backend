@@ -4,6 +4,8 @@ const cors = require('cors');
 const connectDB = require('./config/database');
 const fs = require('fs');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -30,7 +32,7 @@ connectDB();
 // Middleware
 app.use(cors({
   origin: function(origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+    const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -56,6 +58,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (for file downloads)
 app.use('/files', express.static(storagePath));
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Auto入力Pro API Documentation',
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -93,6 +101,8 @@ app.listen(PORT, () => {
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 Server running on http://localhost:${PORT}`);
   console.log(`📁 Storage path: ${storagePath}`);
+  console.log(`\n📚 API Documentation:`);
+  console.log(`   - Swagger UI: http://localhost:${PORT}/api-docs`);
   console.log(`\n✅ API Endpoints:`);
   console.log(`   - Health: http://localhost:${PORT}/api/health`);
   console.log(`   - Auth: http://localhost:${PORT}/api/auth`);

@@ -148,17 +148,110 @@ router.post('/',
 );
 
 /**
- * GET /api/properties
- * Get all properties for the authenticated user
+ * @swagger
+ * /api/properties:
+ *   get:
+ *     summary: Get all properties with pagination
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of properties to skip
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Maximum number of properties to return
+ *     responses:
+ *       200:
+ *         description: List of properties retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: integer
+ *                   example: 20
+ *                 total:
+ *                   type: integer
+ *                   example: 50
+ *                 offset:
+ *                   type: integer
+ *                   example: 0
+ *                 limit:
+ *                   type: integer
+ *                   example: 20
+ *                 hasMore:
+ *                   type: boolean
+ *                   example: true
+ *                 properties:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Property'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100); // Cap at 100
+
+    console.log('[Properties API] GET request:', {
+      offset,
+      limit,
+      userId: req.user.userId,
+      rawQuery: { offset: req.query.offset, limit: req.query.limit }
+    });
+
+    // Get total count
+    const total = await Property.countDocuments({ user_id: req.user.userId });
+
+    // Get paginated properties
     const properties = await Property.find({ user_id: req.user.userId })
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .skip(Number(offset))
+      .limit(Number(limit))
+      .lean(); // Use lean() for better performance
+
+    const hasMore = offset + properties.length < total;
+
+    console.log('[Properties API] Response:', {
+      count: properties.length,
+      total: total,
+      offset: offset,
+      limit: limit,
+      hasMore: hasMore,
+      queriedLimit: Number(limit)
+    });
 
     res.json({
       success: true,
       count: properties.length,
+      total: total,
+      offset: offset,
+      limit: limit,
+      hasMore: hasMore,
       properties: properties
     });
   } catch (error) {
@@ -171,8 +264,57 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 /**
- * GET /api/properties/:id
- * Get a single property by ID (with HTML content)
+ * @swagger
+ * /api/properties/{id}:
+ *   get:
+ *     summary: Get a single property by ID
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Property MongoDB ObjectId
+ *     responses:
+ *       200:
+ *         description: Property retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 property:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Property'
+ *                     - type: object
+ *                       properties:
+ *                         html_content:
+ *                           type: string
+ *                           description: REINS HTML page content
+ *       404:
+ *         description: Property not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
@@ -246,8 +388,52 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 /**
- * DELETE /api/properties/:id
- * Delete a property and its files
+ * @swagger
+ * /api/properties/{id}:
+ *   delete:
+ *     summary: Delete a property and its associated files
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Property MongoDB ObjectId
+ *     responses:
+ *       200:
+ *         description: Property deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Property deleted successfully
+ *       404:
+ *         description: Property not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
