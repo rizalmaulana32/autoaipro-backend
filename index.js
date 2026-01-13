@@ -11,6 +11,10 @@ const swaggerSpec = require('./swagger');
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
 
+// Import storage service
+const StorageFactory = require('./services/storage/StorageFactory');
+const storageService = StorageFactory.getInstance();
+
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,8 +60,42 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (for file downloads)
-app.use('/files', express.static(storagePath));
+// Serve files from storage (local or Supabase)
+app.get('/files/*', async (req, res) => {
+  try {
+    const filePath = req.params[0]; // Everything after /files/
+
+    // Check if file exists
+    const exists = await storageService.fileExists(filePath);
+    if (!exists) {
+      return res.status(404).json({ success: false, error: 'File not found' });
+    }
+
+    // Download file from storage
+    const fileBuffer = await storageService.downloadFile(filePath);
+
+    // Determine content type based on extension
+    const ext = filePath.split('.').pop().toLowerCase();
+    const contentTypes = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'pdf': 'application/pdf',
+      'html': 'text/html',
+      'htm': 'text/html'
+    };
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+
+    // Set headers and send file
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    res.send(fileBuffer);
+  } catch (error) {
+    console.error('File serving error:', error);
+    res.status(500).json({ success: false, error: 'Failed to serve file' });
+  }
+});
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

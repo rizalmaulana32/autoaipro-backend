@@ -145,15 +145,21 @@ const PropertySchema = new mongoose.Schema({
   conditions: String,
   housingPerformance: String,
 
-  // File paths
+  // File paths and URLs
   files: {
     html_path: String,
     html_filename: String,
+    html_url: String,
     floorplan_path: String,
     floorplan_filename: String,
+    floorplan_url: String,
     image_paths: [String],
-    image_filenames: [String]
+    image_filenames: [String],
+    image_urls: [String]
   },
+
+  // Storage provider info
+  storage_provider: String,
 
   // Metadata
   created_at: {

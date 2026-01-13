@@ -38,12 +38,26 @@ const upload = multer({
 
 /**
  * Helper: Sanitize folder name
+ * Converts full-width characters to half-width and removes non-ASCII
  */
 function sanitizeFolderName(name) {
   return name
-    .replace(/[<>:"/\\|?*]/g, '_')  // Replace invalid chars
-    .replace(/\s+/g, '_')            // Replace spaces
-    .substring(0, 100);              // Limit length
+    // Convert full-width alphanumeric to half-width
+    .replace(/[！-～]/g, (char) => {
+      return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+    })
+    // Replace remaining non-ASCII characters with underscore
+    .replace(/[^\x00-\x7F]/g, '_')
+    // Replace invalid filesystem chars
+    .replace(/[<>:"/\\|?*]/g, '_')
+    // Replace spaces
+    .replace(/\s+/g, '_')
+    // Replace multiple underscores with single
+    .replace(/_+/g, '_')
+    // Remove leading/trailing underscores
+    .replace(/^_+|_+$/g, '')
+    // Limit length
+    .substring(0, 100);
 }
 
 /**
