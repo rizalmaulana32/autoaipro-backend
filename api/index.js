@@ -1,3 +1,6 @@
-const app = require('../index');
+// Vercel serverless entry point
+const app = require('../index.js');
 
-module.exports = app;
+module.exports = (req, res) => {
+  return app(req, res);
+};
