@@ -4,8 +4,11 @@ node_modules/
 # Environment variables
 .env
 
-# Storage (uploaded files)
-storage/
+# Storage (uploaded files) - only root level storage folder
+/storage/
+
+# Keep services/storage (code, not uploads)
+!services/
 
 # Logs
 *.log
