@@ -10,6 +10,7 @@ const swaggerSpec = require('./swagger');
 // Import routes
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
+const apiKeyRoutes = require('./routes/apikeys');
 
 // Import storage service
 const StorageFactory = require('./services/storage/StorageFactory');
@@ -106,6 +107,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/apikeys', apiKeyRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -144,5 +146,6 @@ app.listen(PORT, () => {
   console.log(`\n✅ API Endpoints:`);
   console.log(`   - Health: http://localhost:${PORT}/api/health`);
   console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`   - Properties: http://localhost:${PORT}/api/properties\n`);
+  console.log(`   - Properties: http://localhost:${PORT}/api/properties`);
+  console.log(`   - API Keys: http://localhost:${PORT}/api/apikeys (Admin only)\n`);
 });

@@ -28,6 +28,13 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+          description: 'JWT Bearer token for user authentication',
+        },
+        ApiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-API-Key',
+          description: 'API key for third-party access',
         },
       },
       schemas: {

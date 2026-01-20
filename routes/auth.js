@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const authenticateToken = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -217,7 +218,7 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, username: user.username },
+      { userId: user._id, username: user.username, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -228,7 +229,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
@@ -310,6 +312,7 @@ router.get('/me', authenticateToken, async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         created_at: user.created_at,
         last_login: user.last_login
       }
@@ -319,6 +322,208 @@ router.get('/me', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get user info'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/setup-admin:
+ *   post:
+ *     summary: Setup first admin (only works if no admin exists)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - setup_key
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: myuser
+ *               setup_key:
+ *                 type: string
+ *                 example: SETUP_ADMIN_2026
+ *     responses:
+ *       200:
+ *         description: User promoted to admin
+ *       400:
+ *         description: Invalid setup key or admin already exists
+ */
+router.post('/setup-admin', async (req, res) => {
+  try {
+    const { username, setup_key } = req.body;
+
+    // Simple setup key (you can change this or use env variable)
+    const SETUP_KEY = process.env.ADMIN_SETUP_KEY || 'SETUP_ADMIN_2026';
+
+    if (setup_key !== SETUP_KEY) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid setup key'
+      });
+    }
+
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ role: 'admin' });
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        error: 'Admin already exists. Use admin API to promote users.'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Make admin
+    user.role = 'admin';
+    await user.save();
+
+    console.log(`✅ User "${username}" promoted to admin via setup`);
+
+    res.json({
+      success: true,
+      message: `User "${username}" is now admin`,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Setup admin error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to setup admin'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: List all users (Admin only)
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users
+ *       403:
+ *         description: Admin access required
+ */
+router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ created_at: -1 });
+
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map(user => ({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at,
+        last_login: user.last_login
+      }))
+    });
+  } catch (error) {
+    console.error('List users error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to list users'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/users/{id}/role:
+ *   put:
+ *     summary: Update user role (Admin only)
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [user, admin]
+ *                 example: admin
+ *     responses:
+ *       200:
+ *         description: User role updated
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: User not found
+ */
+router.put('/users/:id/role', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role. Must be "user" or "admin"'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    user.role = role;
+    await user.save();
+
+    console.log(`✅ User "${user.username}" role changed to "${role}"`);
+
+    res.json({
+      success: true,
+      message: `User role updated to "${role}"`,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Update role error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update user role'
     });
   }
 });

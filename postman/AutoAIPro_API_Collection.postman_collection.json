@@ -1,0 +1,628 @@
+{
+  "info": {
+    "name": "Auto入力Pro API",
+    "_postman_id": "autoaipro-api-collection",
+    "description": "Auto入力Pro API Collection\n\n## Quick Start\n1. Import collection + environment\n2. Run Login → token auto-saved\n3. All other requests will work",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.user) {",
+                  "    pm.environment.set('user_id', jsonData.user.id);",
+                  "    console.log('✅ User registered. ID saved: ' + jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.token) {",
+                  "    pm.environment.set('jwt_token', jsonData.token);",
+                  "    console.log('✅ JWT token saved');",
+                  "}",
+                  "if (jsonData.user) {",
+                  "    pm.environment.set('user_id', jsonData.user.id);",
+                  "    pm.environment.set('user_role', jsonData.user.role || 'user');",
+                  "    console.log('✅ User ID saved: ' + jsonData.user.id);",
+                  "    console.log('✅ User role: ' + (jsonData.user.role || 'user'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.user) {",
+                  "    pm.environment.set('user_id', jsonData.user.id);",
+                  "    pm.environment.set('user_role', jsonData.user.role || 'user');",
+                  "    console.log('✅ User info loaded');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "⭐ Setup First Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success) {",
+                  "    console.log('✅ User is now admin!');",
+                  "    console.log('⚠️ Please run Login again to get new token with admin role');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"YOUR_USERNAME_HERE\",\n  \"setup_key\": \"SETUP_ADMIN_2026\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/setup-admin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "setup-admin"]
+            },
+            "description": "First admin setup only. After this, use Login again to get admin token."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Users (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.users && jsonData.users.length > 0) {",
+                  "    // Save first user ID for convenience",
+                  "    var firstUser = jsonData.users[0];",
+                  "    pm.environment.set('target_user_id', firstUser.id);",
+                  "    console.log('✅ Found ' + jsonData.users.length + ' users');",
+                  "    console.log('✅ First user ID saved to target_user_id: ' + firstUser.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Role (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success) {",
+                  "    console.log('✅ User role updated to: ' + jsonData.user.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/users/{{target_user_id}}/role",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "users", "{{target_user_id}}", "role"]
+            },
+            "description": "Change target_user_id to the user you want to update"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Properties (JWT Auth)",
+      "item": [
+        {
+          "name": "List Properties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.properties && jsonData.properties.length > 0) {",
+                  "    pm.environment.set('property_id', jsonData.properties[0]._id);",
+                  "    console.log('✅ Found ' + jsonData.properties.length + ' properties');",
+                  "    console.log('✅ First property ID saved: ' + jsonData.properties[0]._id);",
+                  "} else {",
+                  "    console.log('ℹ️ No properties found');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties?offset=0&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties"],
+              "query": [
+                { "key": "offset", "value": "0" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Property by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties", "{{property_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Property",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.property) {",
+                  "    pm.environment.set('property_id', jsonData.property._id);",
+                  "    console.log('✅ Property created. ID saved: ' + jsonData.property._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "propertyData",
+                  "value": "{\n  \"reins_id\": \"REINS-12345\",\n  \"buildingName\": \"サンプルマンション\",\n  \"roomNumber\": \"101\",\n  \"prefecture\": \"東京都\",\n  \"city\": \"渋谷区\",\n  \"rent\": \"120000\",\n  \"layoutType\": \"1K\"\n}",
+                  "type": "text"
+                },
+                { "key": "html", "type": "file", "src": [], "disabled": true },
+                { "key": "pdf", "type": "file", "src": [], "disabled": true },
+                { "key": "images", "type": "file", "src": [], "disabled": true }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rent\": \"130000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties", "{{property_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Property",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties", "{{property_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Properties (API Key)",
+      "item": [
+        {
+          "name": "List Properties (API Key)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success) {",
+                  "    console.log('✅ API Key works! Found ' + (jsonData.properties?.length || 0) + ' properties');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties?offset=0&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties"],
+              "query": [
+                { "key": "offset", "value": "0" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Property by ID (API Key)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties", "{{property_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Property (API Key)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.property) {",
+                  "    pm.environment.set('property_id', jsonData.property._id);",
+                  "    console.log('✅ Property created via API Key. ID: ' + jsonData.property._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "propertyData",
+                  "value": "{\n  \"reins_id\": \"REINS-99999\",\n  \"buildingName\": \"Third Party Building\",\n  \"roomNumber\": \"201\",\n  \"rent\": \"80000\"\n}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties",
+              "host": ["{{base_url}}"],
+              "path": ["api", "properties"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Keys (Admin)",
+      "item": [
+        {
+          "name": "Create API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.api_key) {",
+                  "    pm.environment.set('api_key', jsonData.api_key);",
+                  "    pm.environment.set('api_key_id', jsonData.key_info.id);",
+                  "    console.log('✅ API Key saved to environment');",
+                  "    console.log('⚠️ SAVE THIS KEY: ' + jsonData.api_key);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Company ABC API Key\",\n  \"company\": \"Company ABC\",\n  \"description\": \"API key for third-party\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/apikeys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All API Keys",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.api_keys && jsonData.api_keys.length > 0) {",
+                  "    pm.environment.set('api_key_id', jsonData.api_keys[0].id);",
+                  "    console.log('✅ Found ' + jsonData.api_keys.length + ' API keys');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/apikeys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get API Key Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/apikeys/{{api_key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys", "{{api_key_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update API Key",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Key Name\",\n  \"permissions\": [\"properties:read\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/apikeys/{{api_key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys", "{{api_key_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/apikeys/{{api_key_id}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys", "{{api_key_id}}", "revoke"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/apikeys/{{api_key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys", "{{api_key_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify API Key",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/apikeys/verify/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "apikeys", "verify", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
