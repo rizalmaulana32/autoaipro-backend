@@ -1,4 +1,10 @@
-require('dotenv').config();
+// Load .env only if exists (not on Vercel)
+try {
+  require('dotenv').config();
+} catch (e) {
+  // Ignore - env vars come from Vercel dashboard
+}
+
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
@@ -12,9 +18,14 @@ const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
 const apiKeyRoutes = require('./routes/apikeys');
 
-// Import storage service
-const StorageFactory = require('./services/storage/StorageFactory');
-const storageService = StorageFactory.getInstance();
+// Import storage service with error handling
+let storageService = null;
+try {
+  const StorageFactory = require('./services/storage/StorageFactory');
+  storageService = StorageFactory.getInstance();
+} catch (e) {
+  console.error('Storage service init error:', e.message);
+}
 
 // Initialize Express app
 const app = express();
@@ -67,6 +78,10 @@ app.use(express.urlencoded({ extended: true }));
 // Serve files from storage (local or Supabase)
 app.get('/files/*', async (req, res) => {
   try {
+    if (!storageService) {
+      return res.status(503).json({ success: false, error: 'Storage service not available' });
+    }
+
     const filePath = req.params[0]; // Everything after /files/
 
     // Check if file exists
@@ -117,7 +132,17 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Auto入力Pro Backend Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    env: {
+      node_env: process.env.NODE_ENV || 'not set',
+      storage_provider: process.env.STORAGE_PROVIDER || 'not set',
+      has_mongodb: !!process.env.MONGODB_URI,
+      has_jwt_secret: !!process.env.JWT_SECRET,
+      has_supabase_url: !!process.env.SUPABASE_URL,
+      has_supabase_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      is_vercel: process.env.VERCEL === '1',
+      storage_service_ready: !!storageService
+    }
   });
 });
 
