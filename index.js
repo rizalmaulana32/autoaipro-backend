@@ -20,16 +20,19 @@ const storageService = StorageFactory.getInstance();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Create storage directories if they don't exist
-const storagePath = process.env.STORAGE_PATH || './storage';
-const directories = ['html', 'images', 'pdfs'];
-directories.forEach(dir => {
-  const fullPath = path.join(storagePath, dir);
-  if (!fs.existsSync(fullPath)) {
-    fs.mkdirSync(fullPath, { recursive: true });
-    console.log(`✅ Created directory: ${fullPath}`);
-  }
-});
+// Create storage directories only in non-serverless environment
+const isVercel = process.env.VERCEL === '1';
+if (!isVercel) {
+  const storagePath = process.env.STORAGE_PATH || './storage';
+  const directories = ['html', 'images', 'pdfs'];
+  directories.forEach(dir => {
+    const fullPath = path.join(storagePath, dir);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+      console.log(`✅ Created directory: ${fullPath}`);
+    }
+  });
+}
 
 // Connect to MongoDB
 connectDB();
@@ -37,7 +40,7 @@ connectDB();
 // Middleware
 app.use(cors({
   origin: function(origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -118,6 +121,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Auto入力Pro API',
+    docs: '/api-docs',
+    health: '/api/health'
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
@@ -135,17 +148,21 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 Auto入力Pro Backend Server`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 Server running on http://localhost:${PORT}`);
-  console.log(`📁 Storage path: ${storagePath}`);
-  console.log(`\n📚 API Documentation:`);
-  console.log(`   - Swagger UI: http://localhost:${PORT}/api-docs`);
-  console.log(`\n✅ API Endpoints:`);
-  console.log(`   - Health: http://localhost:${PORT}/api/health`);
-  console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`   - Properties: http://localhost:${PORT}/api/properties`);
-  console.log(`   - API Keys: http://localhost:${PORT}/api/apikeys (Admin only)\n`);
-});
+// Start server only in non-serverless environment
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Auto入力Pro Backend Server`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+    console.log(`🌐 Server running on http://localhost:${PORT}`);
+    console.log(`\n📚 API Documentation:`);
+    console.log(`   - Swagger UI: http://localhost:${PORT}/api-docs`);
+    console.log(`\n✅ API Endpoints:`);
+    console.log(`   - Health: http://localhost:${PORT}/api/health`);
+    console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
+    console.log(`   - Properties: http://localhost:${PORT}/api/properties`);
+    console.log(`   - API Keys: http://localhost:${PORT}/api/apikeys (Admin only)\n`);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
