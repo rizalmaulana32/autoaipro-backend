@@ -45,8 +45,17 @@ if (!isVercel) {
   });
 }
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB - store promise for serverless
+let dbPromise = null;
+const ensureDbConnected = async () => {
+  if (!dbPromise) {
+    dbPromise = connectDB();
+  }
+  return dbPromise;
+};
+
+// Connect on startup
+ensureDbConnected().catch(err => console.error('DB connection error:', err));
 
 // Middleware
 app.use(cors({
@@ -74,6 +83,17 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Middleware to ensure DB is connected before API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await ensureDbConnected();
+    next();
+  } catch (err) {
+    console.error('DB middleware error:', err);
+    res.status(500).json({ success: false, error: 'Database connection failed' });
+  }
+});
 
 // Serve files from storage (local or Supabase)
 app.get('/files/*', async (req, res) => {
