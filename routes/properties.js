@@ -71,9 +71,59 @@ function getPropertyFolder(propertyData) {
 }
 
 /**
- * POST /api/properties
- * Create a new property with file uploads
- * Requires authentication
+ * @swagger
+ * /api/properties:
+ *   post:
+ *     summary: Create a new property with file uploads
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - propertyData
+ *             properties:
+ *               propertyData:
+ *                 type: string
+ *                 description: JSON string of property data
+ *               html:
+ *                 type: string
+ *                 format: binary
+ *                 description: REINS HTML file
+ *               pdf:
+ *                 type: string
+ *                 format: binary
+ *                 description: Floor plan PDF
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Property images (max 20)
+ *     responses:
+ *       201:
+ *         description: Property created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 property:
+ *                   $ref: '#/components/schemas/Property'
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
 router.post('/',
   authenticateToken,
@@ -392,8 +442,47 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 /**
- * PUT /api/properties/:id
- * Update a property
+ * @swagger
+ * /api/properties/{id}:
+ *   put:
+ *     summary: Update a property
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Property MongoDB ObjectId
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Property fields to update
+ *     responses:
+ *       200:
+ *         description: Property updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 property:
+ *                   $ref: '#/components/schemas/Property'
+ *       404:
+ *         description: Property not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
 router.put('/:id', authenticateToken, async (req, res) => {
   try {

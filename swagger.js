@@ -14,12 +14,12 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development server',
+        url: 'https://autoaipro-backend.vercel.app',
+        description: 'Production server (Vercel)',
       },
       {
-        url: 'https://api.autoaipro.com',
-        description: 'Production server',
+        url: 'http://localhost:3000',
+        description: 'Development server',
       },
     ],
     components: {
