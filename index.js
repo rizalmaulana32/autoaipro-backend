@@ -45,13 +45,9 @@ if (!isVercel) {
   });
 }
 
-// Connect to MongoDB - store promise for serverless
-let dbPromise = null;
+// Connect to MongoDB - always delegate to connectDB which handles caching + reconnect
 const ensureDbConnected = async () => {
-  if (!dbPromise) {
-    dbPromise = connectDB();
-  }
-  return dbPromise;
+  return connectDB();
 };
 
 // Connect on startup
