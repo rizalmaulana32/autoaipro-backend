@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Property = require('../models/Property');
 const authenticateToken = require('../middleware/auth');
@@ -35,6 +36,43 @@ router.get('/users', async (req, res) => {
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ success: false, error: 'Failed to get users' });
+  }
+});
+
+/**
+ * POST /api/admin/users
+ * Create a new user
+ */
+router.post('/users', async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Username, email and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    }
+
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: 'Username or email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = new User({
+      username,
+      email,
+      password: hashedPassword,
+      role: role === 'admin' ? 'admin' : 'user',
+    });
+    await user.save();
+
+    const { password: _, ...userWithoutPassword } = user.toObject();
+    res.status(201).json({ success: true, user: { ...userWithoutPassword, property_count: 0 } });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create user' });
   }
 });
 
