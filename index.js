@@ -17,6 +17,7 @@ const swaggerSpec = require('./swagger');
 const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
 const apiKeyRoutes = require('./routes/apikeys');
+const adminRoutes = require('./routes/admin');
 
 // Import storage service with error handling
 let storageService = null;
@@ -148,6 +149,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOption
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/apikeys', apiKeyRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

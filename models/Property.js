@@ -158,6 +158,13 @@ const PropertySchema = new mongoose.Schema({
     image_urls: [String]
   },
 
+  // Management status (set by user in dashboard)
+  management_status: {
+    type: String,
+    enum: ['new', 'registered', 'not_needed'],
+    default: 'new'
+  },
+
   // Storage provider info
   storage_provider: String,
 
