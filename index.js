@@ -18,6 +18,8 @@ const authRoutes = require('./routes/auth');
 const propertyRoutes = require('./routes/properties');
 const apiKeyRoutes = require('./routes/apikeys');
 const adminRoutes = require('./routes/admin');
+const systemAdminRoutes = require('./routes/systemAdmin');
+const clientAdminRoutes = require('./routes/clientAdmin');
 
 // Import storage service with error handling
 let storageService = null;
@@ -150,6 +152,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/apikeys', apiKeyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/system-admin', systemAdminRoutes);
+app.use('/api/client', clientAdminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

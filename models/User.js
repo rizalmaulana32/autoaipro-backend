@@ -22,8 +22,20 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'system_admin', 'client_admin', 'member'],
     default: 'user'
+  },
+  // Link to client company (for client_admin and member roles)
+  company_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    default: null
+  },
+  // Account active/suspended status
+  status: {
+    type: String,
+    enum: ['active', 'suspended'],
+    default: 'active'
   },
   created_at: {
     type: Date,
@@ -33,5 +45,15 @@ const UserSchema = new mongoose.Schema({
     type: Date
   }
 });
+
+// Helper: is this user a system admin?
+UserSchema.methods.isSystemAdmin = function() {
+  return this.role === 'system_admin' || this.role === 'admin';
+};
+
+// Helper: is this user a client admin?
+UserSchema.methods.isClientAdmin = function() {
+  return this.role === 'client_admin';
+};
 
 module.exports = mongoose.model('User', UserSchema);

@@ -158,11 +158,17 @@ const PropertySchema = new mongoose.Schema({
     image_urls: [String]
   },
 
-  // Management status (set by user in dashboard)
+  // Source portal (SUUMO, HOME'S, athome, REINS, etc.)
+  source: {
+    type: String,
+    default: 'REINS'
+  },
+
+  // Management status - legacy (new/registered/not_needed) + client workflow (pending/approved/rejected/archived)
   management_status: {
     type: String,
-    enum: ['new', 'registered', 'not_needed'],
-    default: 'new'
+    enum: ['new', 'registered', 'not_needed', 'pending', 'approved', 'rejected', 'archived'],
+    default: 'pending'
   },
 
   // Storage provider info

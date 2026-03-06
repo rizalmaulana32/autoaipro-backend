@@ -113,15 +113,15 @@ async function requireAdmin(req, res, next) {
       });
     }
 
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'system_admin') {
       return res.status(403).json({
         success: false,
         error: 'Admin access required'
       });
     }
 
-    // Add role to request
     req.user.role = user.role;
+    req.user.company_id = user.company_id;
     next();
   } catch (error) {
     console.error('Admin check error:', error);
@@ -129,6 +129,39 @@ async function requireAdmin(req, res, next) {
       success: false,
       error: 'Authorization check failed'
     });
+  }
+}
+
+/**
+ * Middleware to require system_admin role (alias for requireAdmin, backward compat)
+ */
+const requireSystemAdmin = requireAdmin;
+
+/**
+ * Middleware to require client_admin role (or system_admin)
+ */
+async function requireClientAdmin(req, res, next) {
+  try {
+    if (req.user.authType === 'apikey') {
+      return res.status(403).json({ success: false, error: 'Client admin access required.' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const allowed = ['admin', 'system_admin', 'client_admin'];
+    if (!allowed.includes(user.role)) {
+      return res.status(403).json({ success: false, error: 'Client admin access required' });
+    }
+
+    req.user.role = user.role;
+    req.user.company_id = user.company_id;
+    next();
+  } catch (error) {
+    console.error('Client admin check error:', error);
+    res.status(500).json({ success: false, error: 'Authorization check failed' });
   }
 }
 
@@ -157,4 +190,6 @@ function requirePermission(permission) {
 
 module.exports = authenticateToken;
 module.exports.requireAdmin = requireAdmin;
+module.exports.requireSystemAdmin = requireSystemAdmin;
+module.exports.requireClientAdmin = requireClientAdmin;
 module.exports.requirePermission = requirePermission;
