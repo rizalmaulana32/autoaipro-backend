@@ -204,6 +204,89 @@ router.get('/properties', async (req, res) => {
 });
 
 /**
+ * POST /api/client/properties/:id/reparse
+ * Re-fetch stored HTML and fill in missing fields (balconyDirection, moveInDate, transport, etc.)
+ */
+router.post('/properties/:id/reparse', async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    const members = await User.find({ company_id: companyId }, { _id: 1 });
+    const memberIds = members.map(m => m._id.toString());
+
+    const property = await Property.findById(req.params.id);
+    if (!property || !memberIds.includes(property.user_id.toString())) {
+      return res.status(404).json({ success: false, error: 'Property not found' });
+    }
+
+    if (!property.files?.html_url) {
+      return res.status(400).json({ success: false, error: 'No HTML file available for re-parsing' });
+    }
+
+    // Fetch the stored HTML
+    const htmlRes = await fetch(property.files.html_url);
+    if (!htmlRes.ok) throw new Error(`Failed to fetch HTML: ${htmlRes.status}`);
+    const html = await htmlRes.text();
+
+    // Extract a field value by label text — mirrors suumo_html_parser.js logic
+    function extractField(labelText, occurrence = 1) {
+      const escaped = labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Match label text → up to 600 chars → first col div content
+      const pattern = new RegExp(
+        escaped + '[\\s\\S]{0,600}?<div[^>]*class="[^"]*\\bcol\\b[^"]*"[^>]*>\\s*([^<\\s][^<]*)',
+        'gi'
+      );
+      let count = 0;
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        count++;
+        if (count === occurrence) return match[1].trim();
+      }
+      return null;
+    }
+
+    const updates = {};
+
+    // Only fill fields that are currently missing
+    const fill = (field, label, occurrence = 1) => {
+      if (!property[field]) {
+        const val = extractField(label, occurrence);
+        if (val) updates[field] = val;
+      }
+    };
+
+    fill('balconyDirection', 'バルコニー方向');
+    fill('moveInDate',       '入居可能日');
+    fill('moveInTiming',     '入居時期');
+    fill('railwayLine1',     '沿線名',   1);
+    fill('station1',         '駅名',     1);
+    fill('walkMinutes1',     '駅より徒歩', 1);
+    fill('railwayLine2',     '沿線名',   2);
+    fill('station2',         '駅名',     2);
+    fill('walkMinutes2',     '駅より徒歩', 2);
+    fill('railwayLine3',     '沿線名',   3);
+    fill('station3',         '駅名',     3);
+    fill('walkMinutes3',     '駅より徒歩', 3);
+    fill('roomCount',        '間取部屋数');
+    fill('contractPeriod',   '契約期間');
+    fill('equipment',        '設備・条件・住宅性能等');
+    fill('amenities',        '設備');
+    fill('conditions',       '条件');
+
+    if (Object.keys(updates).length === 0) {
+      return res.json({ success: true, message: 'No missing fields found', updated: 0 });
+    }
+
+    updates.updated_at = Date.now();
+    await Property.findByIdAndUpdate(req.params.id, { $set: updates });
+
+    res.json({ success: true, message: 'Fields updated from HTML', updated: Object.keys(updates).length - 1, fields: Object.keys(updates).filter(k => k !== 'updated_at') });
+  } catch (error) {
+    console.error('Reparse property error:', error);
+    res.status(500).json({ success: false, error: 'Failed to re-parse property' });
+  }
+});
+
+/**
  * PUT /api/client/properties/:id/status
  * Update property status (approved/rejected/archived/pending)
  */
