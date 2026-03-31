@@ -253,9 +253,15 @@ router.post('/properties/:id/reparse', async (req, res) => {
         if (val) updates[field] = val;
       }
     };
+    // Always prefer HTML for these fields — HTML includes unit info (万円/ヶ月) that the API omits
+    const fillAlways = (field, label, occurrence = 1) => {
+      const val = extractField(label, occurrence);
+      if (val) updates[field] = val;
+    };
 
     fill('balconyDirection', 'バルコニー方向');
-    fill('moveInDate',       '入居可能日');
+    fill('moveInDate',       '入居年月');
+    if (!updates.moveInDate) fill('moveInDate', '入居可能日'); // fallback
     fill('moveInTiming',     '入居時期');
     fill('railwayLine1',     '沿線名',   1);
     fill('station1',         '駅名',     1);
@@ -268,9 +274,21 @@ router.post('/properties/:id/reparse', async (req, res) => {
     fill('walkMinutes3',     '駅より徒歩', 3);
     fill('roomCount',        '間取部屋数');
     fill('contractPeriod',   '契約期間');
+    // Always re-extract deposit/key money from HTML (HTML includes unit 万円/ヶ月; API returns bare numbers)
+    fillAlways('securityDeposit', '敷金');
+    fillAlways('keyMoney',        '礼金');
     fill('equipment',        '設備・条件・住宅性能等');
-    fill('amenities',        '設備');
-    fill('conditions',       '条件');
+    // Only fill amenities/conditions if they differ from the combined equipment field (avoid triplication)
+    if (!property['amenities']) {
+      const combined = extractField('設備・条件・住宅性能等');
+      const sub = extractField('設備');
+      if (sub && sub !== combined) updates['amenities'] = sub;
+    }
+    if (!property['conditions']) {
+      const combined = extractField('設備・条件・住宅性能等');
+      const sub = extractField('条件');
+      if (sub && sub !== combined) updates['conditions'] = sub;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.json({ success: true, message: 'No missing fields found', updated: 0 });
