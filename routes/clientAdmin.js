@@ -227,6 +227,19 @@ router.post('/properties/:id/reparse', async (req, res) => {
     if (!htmlRes.ok) throw new Error(`Failed to fetch HTML: ${htmlRes.status}`);
     const html = await htmlRes.text();
 
+    // Decode common HTML entities in extracted text
+    function decodeHtmlEntities(str) {
+      return str
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)))
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
     // Extract a field value by label text — mirrors suumo_html_parser.js logic
     function extractField(labelText, occurrence = 1) {
       const escaped = labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -239,7 +252,7 @@ router.post('/properties/:id/reparse', async (req, res) => {
       let match;
       while ((match = pattern.exec(html)) !== null) {
         count++;
-        if (count === occurrence) return match[1].trim();
+        if (count === occurrence) return decodeHtmlEntities(match[1]);
       }
       return null;
     }
