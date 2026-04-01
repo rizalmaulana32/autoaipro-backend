@@ -273,8 +273,23 @@ router.post('/properties/:id/reparse', async (req, res) => {
     };
 
     fill('balconyDirection', 'バルコニー方向');
-    fill('moveInDate',       '入居年月');
-    if (!updates.moveInDate) fill('moveInDate', '入居可能日'); // fallback
+    // moveInDate: extract date + timing (旬) — timing may be in a separate col div in the same row
+    if (!property.moveInDate) {
+      const dateVal = extractField('入居年月') || extractField('入居可能日');
+      if (dateVal) {
+        // Look for timing word in the 400 chars after the date col (same row)
+        const escaped = '入居年月'.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const datePat = new RegExp(escaped + '[\\s\\S]{0,600}?<div[^>]*class="[^"]*\\bcol\\b[^"]*"[^>]*>\\s*[^<\\s][^<]*', 'i');
+        const dateMatch = datePat.exec(html);
+        let timing = '';
+        if (dateMatch) {
+          const nearby = html.slice(dateMatch.index + dateMatch[0].length, dateMatch.index + dateMatch[0].length + 400);
+          const timingMatch = nearby.match(/>(上旬|中旬|下旬|末)</);
+          if (timingMatch) timing = ' ' + timingMatch[1];
+        }
+        updates.moveInDate = dateVal + timing;
+      }
+    }
     fill('moveInTiming',     '入居時期');
     fill('railwayLine1',     '沿線名',   1);
     fill('station1',         '駅名',     1);
