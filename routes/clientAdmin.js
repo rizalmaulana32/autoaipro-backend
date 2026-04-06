@@ -291,6 +291,7 @@ router.post('/properties/:id/reparse', async (req, res) => {
       }
     }
     fill('moveInTiming',     '入居時期');
+    fill('currentStatus',    '現況');
     fill('railwayLine1',     '沿線名',   1);
     fill('station1',         '駅名',     1);
     fill('walkMinutes1',     '駅より徒歩', 1);
