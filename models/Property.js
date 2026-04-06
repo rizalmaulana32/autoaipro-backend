@@ -138,6 +138,7 @@ const PropertySchema = new mongoose.Schema({
   // Move-in & Occupancy
   moveInDate: String,
   moveInTiming: String,
+  currentStatus: String,
 
   // Equipment & Amenities
   equipment: String,
